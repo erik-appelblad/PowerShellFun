@@ -29,72 +29,94 @@ class Snake {
     }
 }
 
-$heading = [Direction]::Left
-$cols = 30
-$rows = 25
-$headX = 15
-$headY = 15
-$snake = [Snake]::new($headX, $headY, $heading)
+$cols = 25
+$rows = 20
+$headX = 20
+$headY = 10
+$snake = [Snake]::new($headX, $headY, [Direction]::Left)
+$score = 0
+$gameOver = $false
+$hasWon = $false
 
 function PlaceFruit {
-    while ($true) {
-        $x = Get-Random -Minimum 1 -Maximum ($cols - 1)
-        $y = Get-Random -Minimum 1 -Maximum ($rows - 1)
+    $availableCells = [System.Collections.Generic.List[Cell]]::new()
 
-        if ($x -ne $script:snake.X -or $y -ne $script:snake.Y) {
-            return [Cell]::new($x, $y)
+    for ($y = 1; $y -lt ($script:rows - 1); $y++) {
+        for ($x = 1; $x -lt ($script:cols - 1); $x++) {
+            $occupied = $x -eq $script:snake.Head.X -and $y -eq $script:snake.Head.Y
+            foreach ($cell in $script:snake.Cells) {
+                if ($x -eq $cell.X -and $y -eq $cell.Y) {
+                    $occupied = $true
+                    break
+                }
+            }
+
+            if (-not $occupied) {
+                $availableCells.Add([Cell]::new($x, $y))
+            }
         }
     }
+
+    if ($availableCells.Count -eq 0) {
+        return $null
+    }
+
+    return Get-Random -InputObject $availableCells
 }
 
 function Draw {
     [Console]::SetCursorPosition(0, 0)
 
-    for ($y = 0; $y -lt $rows; $y++) {
-        $lineArr = [char[]]::new($cols)
-        for ($x = 0; $x -lt $cols; $x++) {
-            if ($x -eq 0 -or $x -eq $cols-1 -or $y -eq 0 -or $y -eq $rows - 1) {
+    for ($y = 0; $y -lt $script:rows; $y++) {
+        $lineArr = [char[]]::new($script:cols)
+        for ($x = 0; $x -lt $script:cols; $x++) {
+            if ($x -eq 0 -or $x -eq $script:cols - 1 -or $y -eq 0 -or $y -eq $script:rows - 1) {
                 $lineArr[$x] = '#'
-            } elseif ($x -eq $headX -and $y -eq $headY) {
+            } elseif ($x -eq $script:snake.Head.X -and $y -eq $script:snake.Head.Y) {
                 $lineArr[$x] = '$'
-            } elseif ($x -eq $fruit.X -and $y -eq $fruit.Y) {
+            } elseif ($null -ne $script:fruit -and $x -eq $script:fruit.X -and $y -eq $script:fruit.Y) {
                 $lineArr[$x] = '@'
             } else {
                 $lineArr[$x] = '.'
+                foreach ($cell in $script:snake.Cells) {
+                    if ($x -eq $cell.X -and $y -eq $cell.Y) {
+                        $lineArr[$x] = '¤'
+                        break
+                    }
+                }
             }
         }
-        Write-Host ($lineArr)
+        Write-Host $lineArr
     }
 }
 
 $fruit = PlaceFruit
 [Console]::CursorVisible = $false
 
-while ($true) {
-    #Input
+while (-not $gameOver) {
     while ([Console]::KeyAvailable) {
 
         $key = [Console]::ReadKey($true)
 
         switch ($key.Key) {
             'UpArrow' {
-                if ($heading -ne [Direction]::Down) {
-                    $heading = [Direction]::Up
+                if ($snake.Heading -ne [Direction]::Down) {
+                    $snake.Heading = [Direction]::Up
                 }
             }
             'LeftArrow' {
-                if ($heading -ne [Direction]::Right) {
-                    $heading = [Direction]::Left
+                if ($snake.Heading -ne [Direction]::Right) {
+                    $snake.Heading = [Direction]::Left
                 }
             }
             'DownArrow' {
-                if ($heading -ne [Direction]::Up) {
-                    $heading = [Direction]::Down
+                if ($snake.Heading -ne [Direction]::Up) {
+                    $snake.Heading = [Direction]::Down
                 }
             }
             'RightArrow' {
-                if ($heading -ne [Direction]::Left) {
-                    $heading = [Direction]::Right
+                if ($snake.Heading -ne [Direction]::Left) {
+                    $snake.Heading = [Direction]::Right
                 }
             }
             'Escape' {
@@ -106,40 +128,63 @@ while ($true) {
         }
     }
     
-    # Collision
-    if ($headX -eq $fruit.X -and $headY -eq $fruit.Y) {
-
-        $score++
-        $fruit = PlaceFruit
+    $nextX = $snake.Head.X
+    $nextY = $snake.Head.Y
+    switch ($snake.Heading) {
+        ([Direction]::Up) { $nextY-- }
+        ([Direction]::Left) { $nextX-- }
+        ([Direction]::Down) { $nextY++ }
+        ([Direction]::Right) { $nextX++ }
     }
 
-    if ($headX -eq 0 -or $headX -eq $cols-1 -or $headY -eq 0 -or $headY -eq $rows-1) {
+    if ($nextX -eq 0 -or $nextX -eq $cols - 1 -or $nextY -eq 0 -or $nextY -eq $rows - 1) {
+        $gameOver = $true
         break
     }
 
-    if ($heading -eq [Direction]::Up) {
-        $headY -= 1
+    $eatingFruit = $null -ne $fruit-and $nextX -eq $fruit.X -and $nextY -eq $fruit.Y
+    $hitBody = $false
+    foreach ($cell in $snake.Cells) {
+        $isMovingTail = -not $eatingFruit -and
+            $null -ne $snake.Cells.Last -and
+            [object]::ReferenceEquals($cell, $snake.Cells.Last.Value)
+        if ($nextX -eq $cell.X -and $nextY -eq $cell.Y -and -not $isMovingTail) {
+            $hitBody = $true
+            break
+        }
     }
-    if ($heading -eq [Direction]::Left) {
-        $headX -= 1
+
+    if ($hitBody) {
+        $gameOver = $true
+        break
     }
-    if ($heading -eq [Direction]::Down) {
-        $headY += 1
-    }
-    if ($heading -eq [Direction]::Right) {
-        $headX += 1
+
+    [void]$snake.Cells.AddFirst($snake.Head)
+    $snake.Head = [Cell]::new($nextX, $nextY)
+    if ($eatingFruit) {
+        $score++
+        $fruit = PlaceFruit
+        if ($null -eq $fruit) {
+            $hasWon = $true
+            break
+        }
+    } else {
+        $snake.Cells.RemoveLast()
     }
 
     Draw
-
 
     Write-Host ""
     Write-Host "Score: $score"
     Write-Host "ESC = Quit"
     
-    Start-Sleep -Milliseconds 100
+    Start-Sleep -Milliseconds (120 - $score)
 } 
 
 Draw
-Write-Host "You lost!"
+if ($hasWon) {
+    Write-Host "You win!"
+} else {
+    Write-Host "You lost!"
+}
 Write-Host "Score: $score"
