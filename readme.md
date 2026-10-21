@@ -2,4 +2,4 @@
 
 ## Snake
 Classic snake in the terminal:
-![Snake overview](assets/snake/overview.png)
+![Snake overview](assets/snake/color.png)
