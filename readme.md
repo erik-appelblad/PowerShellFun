@@ -1,5 +1,5 @@
-# Learning PowerShell by making games and stuff
+# Increasing my PowerShell power level by making fun stuff
 
 ## Snake
-Classic snake in the terminal:
+Classic snake in the terminal: \
 ![Snake overview](assets/snake/color.png)
