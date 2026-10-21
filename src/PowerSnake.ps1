@@ -45,7 +45,7 @@ class Snake {
     }
 }
 
-function init {
+function Init {
     if ($script:noOfCols -gt 5) {
         $script:cols = $script:noOfCols
     } else {
@@ -119,6 +119,7 @@ function Draw {
         }
 
         $currentColor = $null
+
         foreach ($char in $lineArr) {
             $nextColor = switch ($char) {
                 '#' { 'Blue' }
@@ -184,6 +185,7 @@ function Run {
         
         $nextX = $snake.Head.X
         $nextY = $snake.Head.Y
+
         switch ($snake.CurrentDirection) {
             ([Direction]::Up) { $nextY-- }
             ([Direction]::Left) { $nextX-- }
@@ -250,6 +252,7 @@ while ($keepPlaying) {
     } else {
         Write-Host "You lost!" -ForegroundColor Red
     }
+
     Write-Host "Score: $score"
     
     $date = Get-Date
@@ -258,6 +261,7 @@ while ($keepPlaying) {
     [Console]::CursorVisible = $true
     
     $retry = Read-Host -Prompt "Do you want to try again? [Y|N]"
+
     if ($retry -eq 'Y') {
         $keepPlaying = $true
         Clear-Host
@@ -278,6 +282,7 @@ while ($keepPlaying) {
     
     Write-Host "Well done $name, you got $score fruits!"
     $save = Read-Host -Prompt "Add score to highscore list? [Y|N|Q]"
+    
     if ($save -eq 'Y') {
         if (-not (Test-Path $filename)) {
             Set-Content -path highscores.csv "Date,Name,Score,Playtime"
